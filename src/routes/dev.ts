@@ -8,14 +8,15 @@
 //                                   fresh qrMessage).
 //   GET  /dev/login?email=…       — issues a staff session cookie directly.
 //                                   Skips the magic-link round trip.
-import type { FastifyInstance } from "fastify";
+
 import { createHash } from "node:crypto";
-import { query } from "../db.js";
+import type { FastifyInstance } from "fastify";
 import { config } from "../config.js";
+import { query } from "../db.js";
 import { signPassQr, signStaffSession } from "../lib/jwt.js";
 
 function sha256(s: string): string {
-  return createHash("sha256").update(s).digest("hex");
+	return createHash("sha256").update(s).digest("hex");
 }
 
 const PAGE = (bar: string, serial: string) => `
@@ -57,7 +58,7 @@ const PAGE = (bar: string, serial: string) => `
   <div class="foot">Serial <code>${serial}</code> · auto-refreshes</div>
 </div>
 
-<script src="https://unpkg.com/qrcode@1.5.4/build/qrcode.min.js"></script>
+<script src="/vendor/qrcode/qrcode.min.js"></script>
 <script>
   const SERIAL = ${JSON.stringify(serial)};
   const qrDiv  = document.getElementById("qr");
@@ -91,86 +92,93 @@ const PAGE = (bar: string, serial: string) => `
 </html>`;
 
 export function registerDev(app: FastifyInstance) {
-  if (!config.devMockWallets) return;
+	if (!config.devMockWallets) return;
 
-  // Pass simulator page.
-  app.get<{ Params: { serial: string } }>("/dev/pass/:serial", async (req, reply) => {
-    const { rows } = await query<{ id: string }>(
-      `select id from passes where serial_number = $1`,
-      [req.params.serial],
-    );
-    if (!rows[0]) return reply.code(404).type("text/html").send("<h1>Unknown pass</h1>");
-    return reply.type("text/html").send(PAGE(config.bar.name, req.params.serial));
-  });
+	// Pass simulator page.
+	app.get<{ Params: { serial: string } }>(
+		"/dev/pass/:serial",
+		async (req, reply) => {
+			const { rows } = await query<{ id: string }>(
+				`select id from passes where serial_number = $1`,
+				[req.params.serial],
+			);
+			if (!rows[0])
+				return reply.code(404).type("text/html").send("<h1>Unknown pass</h1>");
+			return reply
+				.type("text/html")
+				.send(PAGE(config.bar.name, req.params.serial));
+		},
+	);
 
-  // State + fresh QR JWT for the simulator to render.
-  app.get<{ Params: { serial: string } }>("/dev/pass/:serial.json", async (req, reply) => {
-    const { rows } = await query<{
-      customer_id: string;
-      stamps_count: number;
-      reward_ready: boolean;
-    }>(
-      `
+	// State + fresh QR JWT for the simulator to render.
+	app.get<{ Params: { serial: string } }>(
+		"/dev/pass/:serial.json",
+		async (req, reply) => {
+			const { rows } = await query<{
+				customer_id: string;
+				stamps_count: number;
+				reward_ready: boolean;
+			}>(
+				`
       select p.customer_id, c.stamps_count, c.reward_ready
       from passes p join customers c on c.id = p.customer_id
       where p.serial_number = $1
       `,
-      [req.params.serial],
-    );
-    const row = rows[0];
-    if (!row) return reply.code(404).send({ error: "not_found" });
-    return reply
-      .header("cache-control", "no-store")
-      .send({
-        stamps: row.stamps_count,
-        stampsRequired: config.bar.stampsRequired,
-        rewardReady: row.reward_ready,
-        rewardText: config.bar.rewardText,
-        qrMessage: signPassQr(row.customer_id),
-      });
-  });
+				[req.params.serial],
+			);
+			const row = rows[0];
+			if (!row) return reply.code(404).send({ error: "not_found" });
+			return reply.header("cache-control", "no-store").send({
+				stamps: row.stamps_count,
+				stampsRequired: config.bar.stampsRequired,
+				rewardReady: row.reward_ready,
+				rewardText: config.bar.rewardText,
+				qrMessage: signPassQr(row.customer_id),
+			});
+		},
+	);
 
-  // Skip-magic-link staff login. Creates the staff row if it doesn't exist.
-  app.get<{ Querystring: { email?: string } }>(
-    "/dev/login",
-    async (req, reply) => {
-      const email = (req.query.email ?? "").trim().toLowerCase();
-      if (!email) return reply.code(400).send({ error: "email_required" });
+	// Skip-magic-link staff login. Creates the staff row if it doesn't exist.
+	app.get<{ Querystring: { email?: string } }>(
+		"/dev/login",
+		async (req, reply) => {
+			const email = (req.query.email ?? "").trim().toLowerCase();
+			if (!email) return reply.code(400).send({ error: "email_required" });
 
-      let { rows } = await query<{ id: string }>(
-        `select id from staff where lower(email) = $1`,
-        [email],
-      );
-      let staffId = rows[0]?.id;
-      if (!staffId) {
-        const { ulid } = await import("ulid");
-        staffId = ulid();
-        await query(`insert into staff (id, email) values ($1, $2)`, [
-          staffId,
-          email,
-        ]);
-      }
+			const { rows } = await query<{ id: string }>(
+				`select id from staff where lower(email) = $1`,
+				[email],
+			);
+			let staffId = rows[0]?.id;
+			if (!staffId) {
+				const { ulid } = await import("ulid");
+				staffId = ulid();
+				await query(`insert into staff (id, email) values ($1, $2)`, [
+					staffId,
+					email,
+				]);
+			}
 
-      const session = signStaffSession(staffId);
-      const exp = new Date(
-        Date.now() + config.limits.staffSessionDays * 86_400_000,
-      );
-      await query(
-        `update staff
+			const session = signStaffSession(staffId);
+			const exp = new Date(
+				Date.now() + config.limits.staffSessionDays * 86_400_000,
+			);
+			await query(
+				`update staff
          set session_hash = $1, session_exp = $2, last_login_at = now()
          where id = $3`,
-        [sha256(session), exp, staffId],
-      );
+				[sha256(session), exp, staffId],
+			);
 
-      reply
-        .setCookie("cafetone_staff", session, {
-          httpOnly: true,
-          secure: false,
-          sameSite: "lax",
-          path: "/",
-          expires: exp,
-        })
-        .send({ ok: true, staffId, session });
-    },
-  );
+			reply
+				.setCookie("cafetone_staff", session, {
+					httpOnly: true,
+					secure: false,
+					sameSite: "lax",
+					path: "/",
+					expires: exp,
+				})
+				.send({ ok: true, staffId, session });
+		},
+	);
 }

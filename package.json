@@ -1,37 +1,38 @@
 {
-  "name": "cafetone",
-  "version": "0.1.0",
-  "description": "Loyalty Wallet MVP — digital stamp card via Apple Wallet + Google Wallet",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "start": "node dist/index.js",
-    "dev": "tsx watch src/index.ts",
-    "migrate": "tsx scripts/migrate.ts",
-    "google:bootstrap": "tsx scripts/google-bootstrap.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
-  },
-  "engines": {
-    "node": ">=20"
-  },
-  "dependencies": {
-    "@fastify/cookie": "^9.3.1",
-    "@fastify/static": "^7.0.4",
-    "dotenv": "^16.4.5",
-    "fastify": "^4.28.1",
-    "google-auth-library": "^9.14.1",
-    "jsonwebtoken": "^9.0.2",
-    "passkit-generator": "^3.3.1",
-    "pg": "^8.12.0",
-    "postmark": "^4.0.5",
-    "ulid": "^2.3.0"
-  },
-  "devDependencies": {
-    "@types/jsonwebtoken": "^9.0.6",
-    "@types/node": "^22.5.0",
-    "@types/pg": "^8.11.6",
-    "tsx": "^4.19.0",
-    "typescript": "^5.5.4"
-  }
+	"name": "cafetone",
+	"version": "0.1.0",
+	"description": "Loyalty Wallet MVP — digital stamp card via Apple Wallet + Google Wallet",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "tsc -p tsconfig.json",
+		"start": "node dist/index.js",
+		"dev": "tsx watch src/index.ts",
+		"migrate": "tsx scripts/migrate.ts",
+		"google:bootstrap": "tsx scripts/google-bootstrap.ts",
+		"typecheck": "tsc -p tsconfig.json --noEmit"
+	},
+	"engines": {
+		"node": ">=20"
+	},
+	"dependencies": {
+		"@fastify/cookie": "^9.3.1",
+		"@fastify/static": "^7.0.4",
+		"dotenv": "^16.4.5",
+		"fastify": "^4.28.1",
+		"google-auth-library": "^9.14.1",
+		"jsonwebtoken": "^9.0.2",
+		"passkit-generator": "^3.3.1",
+		"pg": "^8.12.0",
+		"postmark": "^4.0.5",
+		"qrcode": "^1.4.4",
+		"ulid": "^2.3.0"
+	},
+	"devDependencies": {
+		"@types/jsonwebtoken": "^9.0.6",
+		"@types/node": "^22.5.0",
+		"@types/pg": "^8.11.6",
+		"tsx": "^4.19.0",
+		"typescript": "^5.5.4"
+	}
 }
