@@ -43,6 +43,13 @@ The spec is intentionally small. These are **out of scope** for v1:
 If the user asks for any of these, ask whether it's really v1 before building.
 Three similar lines is better than a premature abstraction for v2.
 
+**Multi-tenant / subdomain SaaS has its own written plan**:
+`docs/phase2-multitenant.md`. If the user asks for "each bar gets a
+subdomain" / "self-service registration" / "admin panel across bars", open
+that doc and walk them through it. **Do not start building Phase 2 until
+the Phase 1 pilot has run and the user has answered the open questions in
+section 12** — those unblock the first PR.
+
 ## Dev loop
 
 ```sh
@@ -87,6 +94,7 @@ src/
     unsubscribe.ts           GDPR delete
     dev.ts                   mock wallet simulator (gated on DEV_MOCK_WALLETS)
 migrations/001_init.sql      full schema
+migrations/002_staff_sessions.sql  per-device staff sessions (many-to-one)
 public/
   join/index.html            customer signup page
   pwa/                       barista PWA (html5-qrcode)
@@ -125,10 +133,16 @@ secrets/                     gitignored; user drops Apple/Google certs here
 
 ## Playbooks — read the relevant one, then walk the user through it
 
+- `docs/setup/rollout.md` — 20-step path from current repo to real wallet
+  passes in a customer's phone. Start here if the user says "how do we
+  actually launch".
 - `docs/setup/apple-wallet.md` — certs, APNs key, asset PNGs, testing
 - `docs/setup/google-wallet.md` — issuer, service account, bootstrap
 - `docs/setup/deploy-fly.md` — Fly.io deploy with managed Postgres
 - `docs/setup/launch-checklist.md` — pre-open-day verification list
+- `docs/phase2-multitenant.md` — the planned SaaS pivot (subdomains,
+  onboarding wizard, billing). Designed to maximize reuse of Phase 1 code.
+  Gate: don't start until the pilot has been open ≥ 2 weeks with real stamps.
 
 Each playbook tags steps with **[you]** (user does it, you guide) or **[me]**
 (Claude does it). Respect those boundaries — don't sign up for things on the
@@ -145,6 +159,7 @@ user's behalf, and don't wait for the user to run typecheck.
 | "it's broken"               | Run `make test`; inspect `.runtime/server.log`       |
 | "add [out-of-scope feature]" | Check scope guardrails, push back if appropriate     |
 | "it's launch day"           | Open `docs/setup/launch-checklist.md`                |
+| "let's start multi-tenant"  | Open `docs/phase2-multitenant.md`, confirm the open questions in §12 before touching code |
 
 ## House style
 
