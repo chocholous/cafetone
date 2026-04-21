@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Cafetone — Loyalty</title>
+  <style>
+    :root {
+      --bg: #111;
+      --fg: #fff;
+      --muted: #aaa;
+      --accent: #e8a87c;
+      --card: #1d1d1d;
+      --err: #ff6b6b;
+      --ok: #2ecc71;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg); color: var(--fg);
+      min-height: 100vh;
+      padding: env(safe-area-inset-top) 1rem env(safe-area-inset-bottom);
+    }
+    main { max-width: 24rem; margin: 3rem auto; }
+    h1 { font-size: 1.75rem; margin: 0 0 .25rem; }
+    p.lede { color: var(--muted); margin-top: 0; }
+    form { display: grid; gap: 1rem; margin-top: 2rem; }
+    label { display: block; font-size: .875rem; color: var(--muted); margin-bottom: .25rem; }
+    input[type=email], input[type=tel] {
+      width: 100%; padding: .85rem 1rem; border-radius: .75rem;
+      background: var(--card); color: var(--fg); border: 1px solid #2c2c2c;
+      font-size: 1rem;
+    }
+    input:focus { outline: 2px solid var(--accent); }
+    .consent { display: flex; gap: .75rem; align-items: flex-start; font-size: .875rem; color: var(--muted); }
+    .consent a { color: var(--accent); }
+    button[type=submit] {
+      padding: 1rem; font-size: 1rem; font-weight: 600;
+      border: 0; border-radius: .75rem; cursor: pointer;
+      background: var(--accent); color: #111;
+    }
+    button[type=submit]:disabled { opacity: .5; cursor: not-allowed; }
+    .error { color: var(--err); font-size: .875rem; }
+    .success { text-align: center; padding: 2rem 0; }
+    .badge { font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    .add-btn {
+      display: inline-block; padding: 1rem 2rem; margin-top: 1.5rem;
+      border-radius: .75rem; background: #fff; color: #000;
+      text-decoration: none; font-weight: 600;
+    }
+    .add-btn.google { background: #4285f4; color: #fff; }
+  </style>
+</head>
+<body>
+<main>
+  <div id="form-view">
+    <span class="badge" id="bar-badge">Cafetone</span>
+    <h1 id="bar-title">Join our loyalty card.</h1>
+    <p class="lede" id="reward-text">Buy 10, get one free.</p>
+
+    <form id="join-form" novalidate>
+      <div>
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" autocomplete="email" required>
+      </div>
+      <label class="consent">
+        <input type="checkbox" id="consent" required>
+        <span>I agree to receive a digital loyalty pass. You can delete your account any time from the back of the pass. <a href="/privacy" target="_blank">Privacy</a>.</span>
+      </label>
+      <button type="submit" id="submit">Get my card</button>
+      <div id="error" class="error"></div>
+    </form>
+  </div>
+
+  <div id="success-view" class="success" hidden>
+    <h1 id="success-heading">You're in.</h1>
+    <p class="lede" id="success-sub"></p>
+    <a id="wallet-link" class="add-btn" href="#"></a>
+  </div>
+</main>
+
+<script>
+  const form = document.getElementById("join-form");
+  const err  = document.getElementById("error");
+  const btn  = document.getElementById("submit");
+  const view = document.getElementById("form-view");
+  const ok   = document.getElementById("success-view");
+  const link = document.getElementById("wallet-link");
+  const sub  = document.getElementById("success-sub");
+
+  // Pull bar config for the heading + threshold copy.
+  fetch("/config").then(r => r.json()).then(c => {
+    document.getElementById("bar-badge").textContent = c.barName;
+    document.getElementById("bar-title").textContent = `Join our loyalty card.`;
+    document.getElementById("reward-text").textContent =
+      `Buy ${c.stampsRequired}, get one free — ${c.rewardText.toLowerCase()}.`;
+  }).catch(() => {});
+
+  function detectPlatform() {
+    const ua = navigator.userAgent || "";
+    if (/iPhone|iPad|iPod|Macintosh/.test(ua) && /Safari/.test(ua)) return "apple";
+    // Android, or anything else → default Google (Android has overwhelming majority of non-iOS wallet users).
+    return "google";
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    err.textContent = "";
+    btn.disabled = true;
+    btn.textContent = "Working…";
+
+    const body = {
+      email: document.getElementById("email").value.trim(),
+      consent: document.getElementById("consent").checked,
+      platform: detectPlatform(),
+    };
+
+    try {
+      const res = await fetch("/join", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "failed");
+
+      view.hidden = true;
+      ok.hidden = false;
+
+      if (data.platform === "apple") {
+        sub.textContent = "Tap below to add your card to Apple Wallet.";
+        link.textContent = "Add to Apple Wallet";
+        link.href = data.downloadUrl;
+        link.className = "add-btn apple";
+      } else {
+        sub.textContent = "Tap below to add your card to Google Wallet.";
+        link.textContent = "Add to Google Wallet";
+        link.href = data.saveUrl;
+        link.className = "add-btn google";
+      }
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = "Get my card";
+      err.textContent =
+        e.message === "consent_required" ? "Please tick the consent box." :
+        e.message === "invalid_email"    ? "That email doesn't look right." :
+        "Something went wrong. Please try again.";
+    }
+  });
+</script>
+</body>
+</html>

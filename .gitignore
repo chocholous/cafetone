@@ -1,0 +1,21 @@
+node_modules
+dist
+.env
+.env.local
+*.log
+
+# Secrets & certs — NEVER commit
+secrets/
+*.p8
+*.p12
+*.pem
+*.key
+google-service-account*.json
+apple-wwdr*.pem
+pass-cert*.pem
+pass-key*.pem
+
+# Generated
+*.pkpass
+tmp/
+.DS_Store
