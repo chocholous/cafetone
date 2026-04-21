@@ -11,6 +11,7 @@ import { registerStaff } from "./routes/staff.js";
 import { registerStamp } from "./routes/stamp.js";
 import { registerRedeem } from "./routes/redeem.js";
 import { registerUnsubscribe } from "./routes/unsubscribe.js";
+import { registerDev } from "./routes/dev.js";
 
 async function main() {
   const app = Fastify({
@@ -79,6 +80,7 @@ async function main() {
   registerStamp(app);
   registerRedeem(app);
   registerUnsubscribe(app);
+  registerDev(app);
 
   await app.listen({ host: "0.0.0.0", port: config.port });
   console.log(`cafetone listening on :${config.port}`);

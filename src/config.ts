@@ -18,6 +18,12 @@ function int(name: string, fallback: number): number {
   return n;
 }
 
+function bool(name: string): boolean {
+  const v = process.env[name];
+  if (!v) return false;
+  return v === "1" || v.toLowerCase() === "true";
+}
+
 export const config = {
   env: optional("NODE_ENV", "development"),
   port: int("PORT", 3000),
@@ -58,6 +64,8 @@ export const config = {
     from: optional("EMAIL_FROM", "loyalty@example.com"),
   },
 
+  devMockWallets: bool("DEV_MOCK_WALLETS"),
+
   limits: {
     stampCooldownSeconds: int("STAMP_COOLDOWN_SECONDS", 300),
     passQrJwtTtlSeconds: int("PASS_QR_JWT_TTL_SECONDS", 300),
@@ -69,3 +77,8 @@ export const appleEnabled =
   !!config.apple.passTypeId && !!config.apple.signerCertPath;
 export const googleEnabled =
   !!config.google.issuerId && !!config.google.serviceAccountPath;
+
+// In dev-mock mode /join accepts both platforms and hands back a link to the
+// in-browser pass simulator — no Apple/Google credentials required.
+export const anyWalletAvailable =
+  appleEnabled || googleEnabled || config.devMockWallets;

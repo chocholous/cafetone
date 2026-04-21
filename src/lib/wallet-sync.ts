@@ -8,6 +8,10 @@ import { signPassQr } from "./jwt.js";
 import { config, appleEnabled, googleEnabled } from "../config.js";
 
 export async function syncCustomerWallet(customerId: string): Promise<void> {
+  // In dev-mock mode the browser simulator polls for state itself — nothing
+  // to push. Real wallets pull through APNs / Google Wallet REST below.
+  if (config.devMockWallets) return;
+
   const { rows: customers } = await query<{
     stamps_count: number;
     reward_ready: boolean;

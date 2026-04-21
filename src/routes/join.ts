@@ -8,6 +8,8 @@ import { config, appleEnabled, googleEnabled } from "../config.js";
 import { buildSaveLink } from "../lib/google-wallet.js";
 import { signPassQr } from "../lib/jwt.js";
 
+const mockMode = config.devMockWallets;
+
 function isEmail(s: string): boolean {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s);
 }
@@ -37,10 +39,10 @@ export function registerJoin(app: FastifyInstance) {
     }
     const plat = platform === "apple" || platform === "google" ? platform : null;
     if (!plat) return reply.code(400).send({ error: "invalid_platform" });
-    if (plat === "apple" && !appleEnabled) {
+    if (!mockMode && plat === "apple" && !appleEnabled) {
       return reply.code(400).send({ error: "apple_not_configured" });
     }
-    if (plat === "google" && !googleEnabled) {
+    if (!mockMode && plat === "google" && !googleEnabled) {
       return reply.code(400).send({ error: "google_not_configured" });
     }
 
@@ -82,6 +84,16 @@ export function registerJoin(app: FastifyInstance) {
         [ulid(), customerId, plat, serial, authToken],
       );
     });
+
+    // Dev-mock: serve the in-browser pass simulator for either platform.
+    if (mockMode) {
+      return reply.send({
+        platform: plat,
+        mock: true,
+        downloadUrl: `${config.publicBaseUrl}/dev/pass/${serial}`,
+        saveUrl: `${config.publicBaseUrl}/dev/pass/${serial}`,
+      });
+    }
 
     if (plat === "apple") {
       return reply.send({

@@ -4,6 +4,36 @@ Single-bar digital stamp card. QR on the bar → customer gets a wallet pass →
 barista stamps on purchase → reward unlocks at N stamps. Apple Wallet + Google
 Wallet, no native app.
 
+## Quickstart (no Apple / Google account needed)
+
+Prereqs: Docker + Node 20.
+
+```sh
+make install
+make test      # spins up Postgres, migrates, seeds, boots server, runs
+               # the full customer → stamp ×10 → redeem cycle, tears down
+```
+
+If that prints `all good.` you're green. For manual poking:
+
+```sh
+make up        # Postgres + migrate + seed (idempotent)
+make dev       # server in foreground
+# then open in two tabs:
+#   http://localhost:3000/join/    ← customer signup
+#   http://localhost:3000/pwa/     ← barista scanner
+```
+
+In dev mode `DEV_MOCK_WALLETS=true`, so `/join` returns a link to an
+in-browser "pass simulator" at `/dev/pass/:serial` — a fake wallet pass
+that renders a live QR you can scan straight from the barista PWA. Same
+end-to-end path, no certs required.
+
+Testing from a real phone? `make tunnel` (needs `cloudflared`) gives you
+an HTTPS URL, then set `PUBLIC_BASE_URL` to it in `.env` and restart.
+
+For the **real Apple / Google wallet** path, see [Setup](#setup) below.
+
 ## Stack
 
 - **Backend:** Node 20, TypeScript, Fastify, Postgres (`pg`)
@@ -45,7 +75,7 @@ scripts/
   migrate.ts             minimal migration runner
 ```
 
-## Setup
+## Setup (real Apple + Google Wallet)
 
 ### 1. Prerequisites
 
