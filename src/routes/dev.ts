@@ -11,6 +11,7 @@
 
 import { createHash } from "node:crypto";
 import type { FastifyInstance } from "fastify";
+import { ulid } from "ulid";
 import { config } from "../config.js";
 import { query } from "../db.js";
 import { signPassQr, signStaffSession } from "../lib/jwt.js";
@@ -151,7 +152,6 @@ export function registerDev(app: FastifyInstance) {
 			);
 			let staffId = rows[0]?.id;
 			if (!staffId) {
-				const { ulid } = await import("ulid");
 				staffId = ulid();
 				await query(`insert into staff (id, email) values ($1, $2)`, [
 					staffId,
@@ -163,11 +163,13 @@ export function registerDev(app: FastifyInstance) {
 			const exp = new Date(
 				Date.now() + config.limits.staffSessionDays * 86_400_000,
 			);
+			await query(`update staff set last_login_at = now() where id = $1`, [
+				staffId,
+			]);
 			await query(
-				`update staff
-         set session_hash = $1, session_exp = $2, last_login_at = now()
-         where id = $3`,
-				[sha256(session), exp, staffId],
+				`insert into staff_sessions (id, staff_id, session_hash, expires_at)
+         values ($1, $2, $3, $4)`,
+				[ulid(), staffId, sha256(session), exp],
 			);
 
 			reply
